@@ -1,16 +1,22 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Upload from "./pages/Upload";
+import Products from "./pages/Products";
+import Webhooks from "./pages/Webhooks";
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <h1>Welcome</h1>
-    </>
-  )
+    <Router>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Upload />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/webhooks" element={<Webhooks />} />
+        </Routes>
+      </div>
+    </Router>
+  );
 }
 
-export default App
+export default App;

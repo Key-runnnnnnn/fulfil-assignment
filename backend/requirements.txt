@@ -5,3 +5,8 @@ sqlalchemy==2.0.23
 alembic==1.12.1
 psycopg2-binary==2.9.9
 pydantic-settings==2.1.0
+python-multipart==0.0.20
+celery[amqp]==5.3.4
+flower==2.0.1
+kombu==5.3.4
+httpx==0.25.2

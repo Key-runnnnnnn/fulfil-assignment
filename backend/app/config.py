@@ -32,6 +32,28 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = "password"
     DB_NAME: str = "product_importer"
 
+    # RabbitMQ Configuration
+    RABBITMQ_HOST: str = "localhost"
+    RABBITMQ_PORT: int = 5672
+    RABBITMQ_USER: str = "guest"
+    RABBITMQ_PASSWORD: str = "guest"
+    RABBITMQ_VHOST: str = "/"
+
+    # Celery Configuration
+    CELERY_BROKER_URL: Optional[str] = None
+    CELERY_RESULT_BACKEND: Optional[str] = None
+    CELERY_CHUNK_SIZE: int = 1000
+    CELERY_TASK_TIME_LIMIT: int = 3600
+    CELERY_TASK_SOFT_TIME_LIMIT: int = 3300
+
+    # File Upload Configuration
+    MAX_FILE_SIZE_MB: int = 100
+    UPLOAD_DIR: str = "uploads"
+
+    # Webhook Configuration
+    WEBHOOK_TIMEOUT_SECONDS: int = 30
+    WEBHOOK_MAX_RETRIES: int = 3
+
     # Optional: Override with full DATABASE_URL if provided
     DATABASE_URL: Optional[str] = None
 
@@ -41,6 +63,21 @@ class Settings(BaseSettings):
         if self.DATABASE_URL:
             return self.DATABASE_URL
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+
+    @property
+    def get_celery_broker_url(self) -> str:
+        """Construct Celery broker URL (RabbitMQ)"""
+        if self.CELERY_BROKER_URL:
+            return self.CELERY_BROKER_URL
+        return f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}/{self.RABBITMQ_VHOST}"
+
+    @property
+    def get_celery_result_backend(self) -> str:
+        """Construct Celery result backend URL (use database)"""
+        if self.CELERY_RESULT_BACKEND:
+            return self.CELERY_RESULT_BACKEND
+        # Use database for result backend (db+postgresql://)
+        return f"db+{self.get_database_url}"
 
     class Config:
         env_file = ".env"

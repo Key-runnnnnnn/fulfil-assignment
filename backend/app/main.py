@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import init_db
-from app.api import products, webhooks
+from app.api import products, webhooks, upload
 import logging
 
 # Configure logging
@@ -27,6 +27,10 @@ app = FastAPI(
         {
             "name": "webhooks",
             "description": "Webhook configuration and management for event notifications"
+        },
+        {
+            "name": "Upload",
+            "description": "CSV file upload and import job management"
         },
         {
             "name": "health",
@@ -55,6 +59,12 @@ app.include_router(
     webhooks.router,
     prefix=f"{settings.API_V1_PREFIX}/webhooks",
     tags=["webhooks"]
+)
+
+app.include_router(
+    upload.router,
+    prefix=f"{settings.API_V1_PREFIX}/upload",
+    tags=["Upload"]
 )
 
 

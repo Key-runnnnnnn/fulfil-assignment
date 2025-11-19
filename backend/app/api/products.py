@@ -22,16 +22,13 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/", response_model=ProductListResponse)
+@router.get("", response_model=ProductListResponse)
 def list_products(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=100, description="Items per page"),
-    sku: Optional[str] = Query(
-        None, description="Filter by SKU (partial match, case-insensitive)"),
-    name: Optional[str] = Query(
-        None, description="Filter by name (partial match, case-insensitive)"),
-    is_active: Optional[bool] = Query(
-        None, description="Filter by active status"),
+    sku: Optional[str] = Query("", description="Filter by SKU (partial match, case-insensitive)"),
+    name: Optional[str] = Query("", description="Filter by name (partial match, case-insensitive)"),
+    is_active: Optional[str] = Query("", description="Filter by active status"),
     db: Session = Depends(get_db)
 ):
     """
@@ -45,13 +42,15 @@ def list_products(
     """
     query = db.query(Product)
 
-    # Apply filters
-    if sku:
+    # Apply filters (handle empty strings)
+    if sku and sku.strip():
         query = query.filter(func.lower(Product.sku).contains(sku.lower()))
-    if name:
+    if name and name.strip():
         query = query.filter(func.lower(Product.name).contains(name.lower()))
-    if is_active is not None:
-        query = query.filter(Product.is_active == is_active)
+    if is_active and is_active.strip():
+        # Convert string to boolean
+        is_active_bool = is_active.lower() in ('true', '1', 'yes')
+        query = query.filter(Product.is_active == is_active_bool)
 
     # Get total count before pagination
     total = query.count()

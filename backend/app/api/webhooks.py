@@ -205,13 +205,14 @@ async def test_webhook(
             detail="Cannot test a disabled webhook. Enable it first."
         )
 
-    # TODO: Implement actual webhook calling with Celery in Step 8
-    # For now, return a mock response
+    # Queue Celery task to test webhook
     logger.info(f"Test webhook triggered: ID {webhook_id}, URL {webhook.url}")
 
+    task = test_webhook_task.delay(webhook_id)
+
     return WebhookTestResponse(
-        message=f"Test webhook queued successfully (actual implementation pending Celery setup)",
-        task_id="mock-task-id",
+        message=f"Test webhook queued successfully. Check Celery logs for delivery status.",
+        task_id=task.id,
         webhook_url=webhook.url
     )
 
