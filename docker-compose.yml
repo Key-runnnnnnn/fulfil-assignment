@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+
+  # RabbitMQ Message Broker (Optional - for Celery)
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: fulfil_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fulfil_network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fulfil_backend
+    environment:
+      APP_NAME: Product Importer
+      DEBUG: "True"
+      API_V1_PREFIX: /api/v1
+      DATABASE_URL: postgresql://neondb_owner:npg_7LOdCitVh2ul@ep-empty-boat-a43ys46y-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_VHOST: /
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      CELERY_BROKER_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      CELERY_RESULT_BACKEND: rpc://
+      MAX_FILE_SIZE_MB: 100
+      UPLOAD_DIR: uploads
+      WEBHOOK_TIMEOUT_SECONDS: 30
+      WEBHOOK_MAX_RETRIES: 3
+      CELERY_CHUNK_SIZE: 1000
+      CELERY_TASK_TIME_LIMIT: 3600
+      CELERY_TASK_SOFT_TIME_LIMIT: 3300
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/api/v1/products?page=1&page_size=1')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - fulfil_network
+    restart: unless-stopped
+
+  # Celery Worker (Optional - for async tasks)
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fulfil_celery_worker
+    command: celery -A app.celery_app worker --loglevel=info --queues=imports,webhooks --concurrency=4
+    environment:
+      APP_NAME: Product Importer
+      DEBUG: "True"
+      API_V1_PREFIX: /api/v1
+      DATABASE_URL: postgresql://neondb_owner:npg_7LOdCitVh2ul@ep-empty-boat-a43ys46y-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_VHOST: /
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      CELERY_BROKER_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      CELERY_RESULT_BACKEND: rpc://
+      MAX_FILE_SIZE_MB: 100
+      UPLOAD_DIR: uploads
+      WEBHOOK_TIMEOUT_SECONDS: 30
+      WEBHOOK_MAX_RETRIES: 3
+      CELERY_CHUNK_SIZE: 1000
+      CELERY_TASK_TIME_LIMIT: 3600
+      CELERY_TASK_SOFT_TIME_LIMIT: 3300
+    volumes:
+      - ./backend/uploads:/app/uploads
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - fulfil_network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fulfil_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - fulfil_network
+    restart: unless-stopped
+
+networks:
+  fulfil_network:
+    driver: bridge
+
+volumes:
+  rabbitmq_data:

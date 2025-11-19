@@ -39,3 +39,6 @@ uploads/
 # Database
 *.db
 *.sqlite
+
+a.csv
+products1.csv
