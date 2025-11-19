@@ -39,6 +39,35 @@ def list_webhooks(
     return webhooks
 
 
+@router.get("/event-types")
+def get_event_types():
+    """
+    Get list of available webhook event types.
+
+    Returns all supported event types that can trigger webhooks.
+    """
+    return {
+        "event_types": [
+            {
+                "name": "import_complete",
+                "description": "Triggered when a CSV import job completes (success or failure)"
+            },
+            {
+                "name": "product_created",
+                "description": "Triggered when a new product is created via API"
+            },
+            {
+                "name": "product_updated",
+                "description": "Triggered when an existing product is updated"
+            },
+            {
+                "name": "product_deleted",
+                "description": "Triggered when a product is deleted"
+            }
+        ]
+    }
+
+
 @router.get("/{webhook_id}", response_model=WebhookResponse)
 def get_webhook(
     webhook_id: int,
@@ -246,32 +275,3 @@ def toggle_webhook(
     logger.info(f"Toggled webhook {webhook_id} to {status_text}")
 
     return webhook
-
-
-@router.get("/events/types")
-def get_event_types():
-    """
-    Get list of available webhook event types.
-
-    Returns all supported event types that can trigger webhooks.
-    """
-    return {
-        "event_types": [
-            {
-                "name": "import_complete",
-                "description": "Triggered when a CSV import job completes (success or failure)"
-            },
-            {
-                "name": "product_created",
-                "description": "Triggered when a new product is created via API"
-            },
-            {
-                "name": "product_updated",
-                "description": "Triggered when an existing product is updated"
-            },
-            {
-                "name": "product_deleted",
-                "description": "Triggered when a product is deleted"
-            }
-        ]
-    }

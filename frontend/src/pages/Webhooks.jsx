@@ -51,7 +51,8 @@ const Webhooks = () => {
   const loadEventTypes = async () => {
     try {
       const response = await webhooksAPI.getEventTypes();
-      setEventTypes(response.data || []);
+      // Backend returns { event_types: [...] }
+      setEventTypes(response.data.event_types || []);
     } catch (err) {
       console.error("Failed to load event types:", err);
     }
@@ -61,7 +62,7 @@ const Webhooks = () => {
     setModalMode("create");
     setFormData({
       url: "",
-      event_type: "import.completed",
+      event_type: "import_complete",
       is_active: true,
       headers: {},
     });
@@ -326,21 +327,12 @@ const Webhooks = () => {
           </h3>
           <div className="space-y-2">
             {eventTypes.map((event) => (
-              <div key={event} className="flex items-center gap-2">
+              <div key={event.name} className="flex items-center gap-2">
                 <code className="bg-blue-100 px-2 py-1 rounded text-sm text-blue-800">
-                  {event}
+                  {event.name}
                 </code>
                 <span className="text-sm text-blue-700">
-                  {event === "import.completed" &&
-                    "- Triggered when CSV import completes successfully"}
-                  {event === "import.failed" &&
-                    "- Triggered when CSV import fails"}
-                  {event === "product.created" &&
-                    "- Triggered when a product is created"}
-                  {event === "product.updated" &&
-                    "- Triggered when a product is updated"}
-                  {event === "product.deleted" &&
-                    "- Triggered when a product is deleted"}
+                  - {event.description}
                 </span>
               </div>
             ))}
@@ -377,8 +369,8 @@ const Webhooks = () => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 {eventTypes.map((event) => (
-                  <option key={event} value={event}>
-                    {event}
+                  <option key={event.name} value={event.name}>
+                    {event.name}
                   </option>
                 ))}
               </select>
