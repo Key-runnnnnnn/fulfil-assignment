@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 # Create engine with connection pooling
 engine = create_engine(
-    settings.DATABASE_URL,
+    settings.get_database_url,
     poolclass=QueuePool,
     pool_size=20,
     max_overflow=40,
