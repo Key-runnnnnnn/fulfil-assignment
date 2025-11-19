@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.config import settings
+from app.database import init_db
 import logging
 
 # Configure logging
@@ -36,6 +37,13 @@ async def health_check():
 async def startup_event():
     """Startup event handler"""
     logger.info(f"{settings.APP_NAME} started successfully")
+    # Initialize database tables (if database is available)
+    try:
+        init_db()
+        logger.info("Database initialized")
+    except Exception as e:
+        logger.warning(f"Database initialization failed: {e}")
+        logger.warning("App will run without database connection. Please configure DATABASE_URL in .env")
 
 
 @app.on_event("shutdown")
