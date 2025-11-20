@@ -78,6 +78,20 @@ def process_csv_import(self: Task, job_id: str, file_path: str):
                     )
 
                     chunk = []
+
+            # Process remaining chunk
+            if chunk:
+                chunk_success, chunk_errors = process_chunk(
+                    db, chunk, import_job)
+                success_count += chunk_success
+                error_count += len(chunk_errors)
+                processed_rows += len(chunk)
+                errors.extend(chunk_errors)
+
+                update_job_progress(
+                    db, import_job, processed_rows, success_count, error_count
+                )
+
         import_job.status = 'completed'
         import_job.completed_at = datetime.utcnow()
 
@@ -198,6 +212,20 @@ def process_csv_import_sync(job_id: str, file_path: str):
                     )
 
                     chunk = []
+
+            # Process remaining chunk
+            if chunk:
+                chunk_success, chunk_errors = process_chunk(
+                    db, chunk, import_job)
+                success_count += chunk_success
+                error_count += len(chunk_errors)
+                processed_rows += len(chunk)
+                errors.extend(chunk_errors)
+
+                update_job_progress(
+                    db, import_job, processed_rows, success_count, error_count
+                )
+
         import_job.status = 'completed'
         import_job.completed_at = datetime.utcnow()
 
