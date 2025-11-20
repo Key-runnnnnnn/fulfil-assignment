@@ -58,8 +58,7 @@ class ProductResponse(ProductBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class ProductListResponse(BaseModel):
@@ -116,8 +115,7 @@ class WebhookResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class CSVProductRow(BaseModel):
@@ -175,8 +173,7 @@ class ProductFilterParams(BaseModel):
     is_active: Optional[bool] = Field(
         None, description="Filter by active status")
 
-    class Config:
-        extra = 'forbid'
+    model_config = {"extra": "forbid"}
 
 
 class BulkDeleteResponse(BaseModel):

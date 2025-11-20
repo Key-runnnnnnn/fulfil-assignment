@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import computed_field
 from typing import Optional
 import os
 from pathlib import Path
@@ -41,29 +42,33 @@ class Settings(BaseSettings):
 
     DATABASE_URL: Optional[str] = None
 
+    @computed_field  # type: ignore[misc]
     @property
     def get_database_url(self) -> str:
         if self.DATABASE_URL:
             return self.DATABASE_URL
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
+    @computed_field  # type: ignore[misc]
     @property
     def get_celery_broker_url(self) -> str:
         if self.CELERY_BROKER_URL:
             return self.CELERY_BROKER_URL
         return f"amqp://{self.RABBITMQ_USER}:{self.RABBITMQ_PASSWORD}@{self.RABBITMQ_HOST}:{self.RABBITMQ_PORT}/{self.RABBITMQ_VHOST}"
 
+    @computed_field  # type: ignore[misc]
     @property
     def get_celery_result_backend(self) -> str:
         if self.CELERY_RESULT_BACKEND:
             return self.CELERY_RESULT_BACKEND
         return f"db+{self.get_database_url}"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
-        extra = "ignore"
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": True,
+        "extra": "ignore"
+    }
 
 
 settings = Settings()
