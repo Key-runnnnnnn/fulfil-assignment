@@ -54,7 +54,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile menu */}
       <div className="md:hidden border-t border-gray-200">
         <div className="flex justify-around py-2">
           {navItems.map((item) => {

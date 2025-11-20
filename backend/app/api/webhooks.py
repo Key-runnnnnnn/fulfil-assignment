@@ -1,8 +1,3 @@
-"""
-Webhook Management API Endpoints
-Handles webhook configuration for event notifications
-"""
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -25,15 +20,6 @@ logger = logging.getLogger(__name__)
 def list_webhooks(
     db: Session = Depends(get_db)
 ):
-    """
-    List all configured webhooks.
-
-    Returns all webhooks with their configuration including:
-    - URL
-    - Event type
-    - Enabled status
-    - Custom headers
-    """
     webhooks = db.query(Webhook).order_by(Webhook.created_at.desc()).all()
     logger.info(f"Listed {len(webhooks)} webhooks")
     return webhooks
@@ -41,11 +27,6 @@ def list_webhooks(
 
 @router.get("/event-types")
 def get_event_types():
-    """
-    Get list of available webhook event types.
-
-    Returns all supported event types that can trigger webhooks.
-    """
     return {
         "event_types": [
             {
@@ -73,11 +54,6 @@ def get_webhook(
     webhook_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Get a single webhook by ID.
-
-    - **webhook_id**: The ID of the webhook to retrieve
-    """
     webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
 
     if not webhook:
@@ -96,19 +72,6 @@ def create_webhook(
     webhook: WebhookCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Create a new webhook configuration.
-
-    - **url**: Webhook URL (must be valid HTTP/HTTPS URL)
-    - **event_type**: Event that triggers this webhook
-      - `import_complete`: Triggered when CSV import completes
-      - `product_created`: Triggered when a product is created
-      - `product_updated`: Triggered when a product is updated
-      - `product_deleted`: Triggered when a product is deleted
-    - **is_enabled**: Whether webhook is active (default: true)
-    - **headers**: Optional custom HTTP headers (JSON object)
-    """
-    # Convert URL to string and headers to JSON
     webhook_data = {
         'url': str(webhook.url),
         'event_type': webhook.event_type,
@@ -132,13 +95,6 @@ def update_webhook(
     webhook: WebhookUpdate,
     db: Session = Depends(get_db)
 ):
-    """
-    Update an existing webhook configuration.
-
-    - **webhook_id**: The ID of the webhook to update
-    - All fields are optional (only provided fields will be updated)
-    """
-    # Find existing webhook
     db_webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
 
     if not db_webhook:
@@ -148,7 +104,6 @@ def update_webhook(
             detail=f"Webhook with ID {webhook_id} not found"
         )
 
-    # Update only provided fields
     update_data = webhook.model_dump(exclude_unset=True)
 
     if not update_data:
@@ -159,7 +114,6 @@ def update_webhook(
             detail="No fields provided for update"
         )
 
-    # Convert special fields
     if 'url' in update_data:
         update_data['url'] = str(update_data['url'])
     if 'headers' in update_data and update_data['headers'] is not None:
@@ -180,11 +134,6 @@ def delete_webhook(
     webhook_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Delete a webhook configuration.
-
-    - **webhook_id**: The ID of the webhook to delete
-    """
     db_webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
 
     if not db_webhook:
@@ -194,7 +143,7 @@ def delete_webhook(
             detail=f"Webhook with ID {webhook_id} not found"
         )
 
-    url = db_webhook.url  # Store for logging
+    url = db_webhook.url
     db.delete(db_webhook)
     db.commit()
 
@@ -207,17 +156,6 @@ async def test_webhook(
     webhook_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Test a webhook by sending a test payload.
-
-    - **webhook_id**: The ID of the webhook to test
-
-    Sends a test HTTP POST request to the webhook URL with sample data.
-    Returns the response status and any errors.
-
-    **Note**: Actual webhook calling will be implemented with Celery in later steps.
-    For now, this validates the webhook exists and returns a mock response.
-    """
     webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
 
     if not webhook:
@@ -227,17 +165,17 @@ async def test_webhook(
             detail=f"Webhook with ID {webhook_id} not found"
         )
 
-    if not webhook.is_enabled:
+    if not webhook.is_enabled:  # type: ignore
         logger.warning(f"Attempted to test disabled webhook: ID {webhook_id}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot test a disabled webhook. Enable it first."
         )
 
-    # Queue Celery task to test webhook
     logger.info(f"Test webhook triggered: ID {webhook_id}, URL {webhook.url}")
 
-    task = test_webhook_task.delay(webhook_id)
+    from app.tasks.webhook_tasks import test_webhook as test_webhook_task
+    task = test_webhook_task.delay(webhook_id)  # type: ignore
 
     return WebhookTestResponse(
         message=f"Test webhook queued successfully. Check Celery logs for delivery status.",
@@ -251,13 +189,6 @@ def toggle_webhook(
     webhook_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Toggle webhook enabled/disabled status.
-
-    - **webhook_id**: The ID of the webhook to toggle
-
-    Convenience endpoint to quickly enable/disable webhooks without full update.
-    """
     webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
 
     if not webhook:
@@ -266,8 +197,7 @@ def toggle_webhook(
             detail=f"Webhook with ID {webhook_id} not found"
         )
 
-    # Toggle the status
-    webhook.is_enabled = not webhook.is_enabled
+    webhook.is_enabled = not webhook.is_enabled  # type: ignore
     db.commit()
     db.refresh(webhook)
 

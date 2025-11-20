@@ -6,10 +6,6 @@ Base = declarative_base()
 
 
 class Product(Base):
-    """
-    Product model with case-insensitive SKU uniqueness.
-    Supports CRUD operations and bulk CSV imports.
-    """
     __tablename__ = "products"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -22,7 +18,6 @@ class Product(Base):
     updated_at = Column(DateTime, default=datetime.utcnow,
                         onupdate=datetime.utcnow)
 
-    # Case-insensitive unique index on SKU (PostgreSQL specific)
     __table_args__ = (
         Index('idx_sku_lower_unique', func.lower(sku), unique=True),
         Index('idx_sku', sku),
@@ -35,18 +30,13 @@ class Product(Base):
 
 
 class Webhook(Base):
-    """
-    Webhook configuration model for event notifications.
-    Supports multiple event types with custom headers.
-    """
     __tablename__ = "webhooks"
 
     id = Column(Integer, primary_key=True, index=True)
     url = Column(String(500), nullable=False)
-    # 'import_complete', 'product_created', etc.
     event_type = Column(String(50), nullable=False)
     is_enabled = Column(Boolean, default=True, nullable=False)
-    headers = Column(Text, nullable=True)  # JSON string of custom headers
+    headers = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow,
                         onupdate=datetime.utcnow)
@@ -56,23 +46,18 @@ class Webhook(Base):
 
 
 class ImportJob(Base):
-    """
-    Track CSV import job progress and status.
-    Enables real-time progress monitoring via SSE.
-    """
     __tablename__ = "import_jobs"
 
-    id = Column(String(36), primary_key=True)  # UUID
+    id = Column(String(36), primary_key=True)
     filename = Column(String(255), nullable=False)
     total_rows = Column(Integer, default=0)
     processed_rows = Column(Integer, default=0)
     success_count = Column(Integer, default=0)
     error_count = Column(Integer, default=0)
-    # pending, processing, completed, failed
     status = Column(String(20), default='pending')
     error_message = Column(Text, nullable=True)
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
 
     def __repr__(self):
-        return f"<ImportJob(id={self.id}, status='{self.status}', processed={self.processed_rows}/{self.total_rows})>"
+        return f"<ImportJob(id={self.id}, status='{self.status}', processed={self.processed_rows}/{self.total_rows})"

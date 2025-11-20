@@ -130,13 +130,11 @@ export const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
         onClick={onClose}
       ></div>
 
-      {/* Modal Content */}
       <div className="flex items-center justify-center min-h-screen px-4 py-6">
         <div
           className={`relative bg-white rounded-lg shadow-xl transform transition-all ${sizes[size]} w-full z-50`}

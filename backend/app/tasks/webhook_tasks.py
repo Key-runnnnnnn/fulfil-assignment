@@ -1,7 +1,3 @@
-"""
-Webhook Tasks
-Handles asynchronous webhook notifications for various events.
-"""
 from celery import Task
 from app.celery_app import celery_app
 from app.database import SessionLocal
@@ -15,36 +11,18 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# Configuration from environment variables
 WEBHOOK_TIMEOUT = settings.WEBHOOK_TIMEOUT_SECONDS
 WEBHOOK_MAX_RETRIES = settings.WEBHOOK_MAX_RETRIES
 
 
 @celery_app.task(bind=True, name='app.tasks.webhook_tasks.send_webhook', max_retries=WEBHOOK_MAX_RETRIES)
 def send_webhook(self: Task, webhook_id: int, event_data: dict):
-    """
-    Send webhook notification asynchronously with retry logic.
-
-    Args:
-        webhook_id: ID of the webhook configuration
-        event_data: Event payload to send
-
-    This task:
-    - Fetches webhook configuration from database
-    - Sends HTTP POST request with custom headers
-    - Retries on failure (up to 3 times with exponential backoff)
-    - Logs success/failure
-
-    Returns:
-        dict: Status information about the webhook delivery
-    """
     db = SessionLocal()
 
     try:
         logger.info(
             f"Sending webhook notification to webhook_id: {webhook_id}")
 
-        # Fetch webhook configuration
         webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
 
         if not webhook:
@@ -55,7 +33,7 @@ def send_webhook(self: Task, webhook_id: int, event_data: dict):
                 'message': 'Webhook configuration not found'
             }
 
-        if not webhook.is_enabled:
+        if not webhook.is_enabled:  # type: ignore
             logger.info(f"Webhook {webhook_id} is disabled, skipping")
             return {
                 'webhook_id': webhook_id,
@@ -63,34 +41,30 @@ def send_webhook(self: Task, webhook_id: int, event_data: dict):
                 'message': 'Webhook is disabled'
             }
 
-        # Prepare headers
         headers = {'Content-Type': 'application/json'}
-        if webhook.headers:
+        if webhook.headers:  # type: ignore
             try:
-                custom_headers = json.loads(webhook.headers)
+                custom_headers = json.loads(webhook.headers)  # type: ignore
                 headers.update(custom_headers)
             except json.JSONDecodeError as e:
                 logger.warning(f"Invalid JSON in webhook headers: {e}")
 
-        # Prepare payload
         payload = {
             'event_type': webhook.event_type,
             'timestamp': datetime.utcnow().isoformat(),
             'data': event_data
         }
 
-        # Send HTTP POST request
         logger.info(f"Sending webhook to {webhook.url}")
         logger.debug(f"Payload: {json.dumps(payload, indent=2)}")
 
         with httpx.Client(timeout=WEBHOOK_TIMEOUT) as client:
             response = client.post(
-                webhook.url,
+                webhook.url,  # type: ignore
                 json=payload,
                 headers=headers
             )
 
-            # Check response status
             response.raise_for_status()
 
             logger.info(
@@ -100,20 +74,17 @@ def send_webhook(self: Task, webhook_id: int, event_data: dict):
                 'webhook_id': webhook_id,
                 'status': 'success',
                 'status_code': response.status_code,
-                'response_text': response.text[:500],  # First 500 chars
+                'response_text': response.text[:500],
                 'url': webhook.url
             }
 
     except httpx.HTTPStatusError as e:
-        # HTTP error (4xx, 5xx)
         logger.error(
             f"Webhook {webhook_id} failed with HTTP error: {e.response.status_code}")
 
-        # Retry on 5xx errors (server errors)
         if 500 <= e.response.status_code < 600:
             logger.info(
                 f"Retrying webhook {webhook_id} (attempt {self.request.retries + 1}/{WEBHOOK_MAX_RETRIES})")
-            # Exponential backoff
             raise self.retry(exc=e, countdown=60 * (2 ** self.request.retries))
 
         return {
@@ -125,14 +96,11 @@ def send_webhook(self: Task, webhook_id: int, event_data: dict):
         }
 
     except httpx.RequestError as e:
-        # Network error (connection, timeout, etc.)
         logger.error(
             f"Webhook {webhook_id} failed with network error: {str(e)}")
 
-        # Retry on network errors
         logger.info(
             f"Retrying webhook {webhook_id} (attempt {self.request.retries + 1}/{WEBHOOK_MAX_RETRIES})")
-        # Exponential backoff
         raise self.retry(exc=e, countdown=60 * (2 ** self.request.retries))
 
     except Exception as e:
@@ -152,24 +120,11 @@ def send_webhook(self: Task, webhook_id: int, event_data: dict):
 
 @celery_app.task(bind=True, name='app.tasks.webhook_tasks.trigger_webhooks_for_event')
 def trigger_webhooks_for_event(self: Task, event_type: str, event_data: dict):
-    """
-    Trigger all enabled webhooks for a specific event type.
-
-    Args:
-        event_type: Type of event (import_complete, product_created, etc.)
-        event_data: Event payload
-
-    Finds all enabled webhooks for the event type and queues send_webhook tasks.
-
-    Returns:
-        dict: Summary of triggered webhooks
-    """
     db = SessionLocal()
 
     try:
         logger.info(f"Triggering webhooks for event: {event_type}")
 
-        # Find all enabled webhooks for this event type
         webhooks = db.query(Webhook).filter(
             Webhook.event_type == event_type,
             Webhook.is_enabled == True
@@ -184,11 +139,10 @@ def trigger_webhooks_for_event(self: Task, event_type: str, event_data: dict):
                 'message': 'No enabled webhooks found'
             }
 
-        # Queue webhook tasks
         triggered_ids = []
         for webhook in webhooks:
             try:
-                send_webhook.delay(webhook.id, event_data)
+                send_webhook.delay(webhook.id, event_data)  # type: ignore
                 triggered_ids.append(webhook.id)
                 logger.info(f"Queued webhook {webhook.id} for {webhook.url}")
             except Exception as e:
@@ -220,25 +174,14 @@ def trigger_webhooks_for_event(self: Task, event_type: str, event_data: dict):
 
 @celery_app.task(bind=True, name='app.tasks.webhook_tasks.test_webhook')
 def test_webhook(self: Task, webhook_id: int):
-    """
-    Test a webhook by sending a test payload.
-
-    Args:
-        webhook_id: ID of the webhook to test
-
-    Returns:
-        dict: Test result
-    """
     logger.info(f"Testing webhook {webhook_id}")
 
-    # Send test payload
     test_payload = {
         'test': True,
         'message': 'This is a test webhook notification',
         'timestamp': datetime.utcnow().isoformat()
     }
 
-    # Use the regular send_webhook task
-    result = send_webhook(webhook_id, test_payload)
+    result = send_webhook(self, webhook_id, test_payload)
 
     return result

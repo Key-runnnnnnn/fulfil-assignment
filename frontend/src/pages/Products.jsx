@@ -225,7 +225,6 @@ const Products = () => {
           />
         )}
 
-        {/* Actions Bar */}
         <Card className="p-4 mb-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex-1 w-full md:max-w-md">
@@ -278,7 +277,6 @@ const Products = () => {
             </div>
           </div>
 
-          {/* Filters */}
           {showFilters && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t">
               <Input
@@ -317,7 +315,6 @@ const Products = () => {
           )}
         </Card>
 
-        {/* Products Table */}
         <Card className="overflow-hidden">
           {loading ? (
             <div className="flex justify-center items-center py-20">
@@ -427,7 +424,6 @@ const Products = () => {
                 </table>
               </div>
 
-              {/* Pagination */}
               <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t">
                 <div className="text-sm text-gray-700">
                   Showing{" "}
@@ -479,7 +475,6 @@ const Products = () => {
           )}
         </Card>
 
-        {/* Create/Edit Modal */}
         <Modal
           isOpen={showModal}
           onClose={() => setShowModal(false)}

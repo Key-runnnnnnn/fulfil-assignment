@@ -51,7 +51,6 @@ const Webhooks = () => {
   const loadEventTypes = async () => {
     try {
       const response = await webhooksAPI.getEventTypes();
-      // Backend returns { event_types: [...] }
       setEventTypes(response.data.event_types || []);
     } catch (err) {
       console.error("Failed to load event types:", err);
@@ -185,7 +184,6 @@ const Webhooks = () => {
           />
         )}
 
-        {/* Actions */}
         <div className="flex justify-between items-center mb-6">
           <Button
             onClick={loadWebhooks}
@@ -201,7 +199,6 @@ const Webhooks = () => {
           </Button>
         </div>
 
-        {/* Webhooks List */}
         {loading ? (
           <Card className="p-20">
             <div className="flex justify-center">
@@ -320,26 +317,6 @@ const Webhooks = () => {
           </div>
         )}
 
-        {/* Event Types Info */}
-        <Card className="p-6 mt-6 bg-blue-50 border-blue-200">
-          <h3 className="font-semibold text-blue-900 mb-3">
-            Available Event Types
-          </h3>
-          <div className="space-y-2">
-            {eventTypes.map((event) => (
-              <div key={event.name} className="flex items-center gap-2">
-                <code className="bg-blue-100 px-2 py-1 rounded text-sm text-blue-800">
-                  {event.name}
-                </code>
-                <span className="text-sm text-blue-700">
-                  - {event.description}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Create/Edit Modal */}
         <Modal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
@@ -376,7 +353,6 @@ const Webhooks = () => {
               </select>
             </div>
 
-            {/* Custom Headers */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Custom Headers

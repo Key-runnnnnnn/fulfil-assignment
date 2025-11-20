@@ -1,8 +1,3 @@
-"""
-Product CRUD API Endpoints
-Handles all product operations: Create, Read, Update, Delete
-"""
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_
@@ -26,47 +21,44 @@ logger = logging.getLogger(__name__)
 def list_products(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=100, description="Items per page"),
-    sku: Optional[str] = Query("", description="Filter by SKU (partial match, case-insensitive)"),
-    name: Optional[str] = Query("", description="Filter by name (partial match, case-insensitive)"),
-    is_active: Optional[str] = Query("", description="Filter by active status"),
+    sku: Optional[str] = Query(
+        "", description="Filter by SKU (partial match, case-insensitive)"),
+    name: Optional[str] = Query(
+        "", description="Filter by name (partial match, case-insensitive)"),
+    is_active: Optional[str] = Query(
+        "", description="Filter by active status"),
     db: Session = Depends(get_db)
 ):
-    """
-    List products with pagination and filtering.
-
-    - **page**: Page number (default: 1)
-    - **page_size**: Number of items per page (default: 50, max: 100)
-    - **sku**: Filter by SKU (partial, case-insensitive)
-    - **name**: Filter by product name (partial, case-insensitive)
-    - **is_active**: Filter by active/inactive status
-    """
     query = db.query(Product)
 
-    # Apply filters (handle empty strings)
     if sku and sku.strip():
         query = query.filter(func.lower(Product.sku).contains(sku.lower()))
     if name and name.strip():
         query = query.filter(func.lower(Product.name).contains(name.lower()))
     if is_active and is_active.strip():
-        # Convert string to boolean
         is_active_bool = is_active.lower() in ('true', '1', 'yes')
         query = query.filter(Product.is_active == is_active_bool)
 
-    # Get total count before pagination
-    total = query.count()
-
-    # Apply pagination
     offset = (page - 1) * page_size
     products = query.order_by(Product.created_at.desc()).offset(
         offset).limit(page_size).all()
 
-    # Calculate total pages
-    total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+    if page == 1 and len(products) < page_size:
+        total = len(products)
+        total_pages = 1
+    else:
+        next_page_check = query.offset(offset + page_size).limit(1).first()
+        if next_page_check:
+            total = (page * page_size) + 100
+            total_pages = page + 1
+        else:
+            total = (page - 1) * page_size + len(products)
+            total_pages = page
 
     logger.info(
         f"Listed {len(products)} products (page {page}/{total_pages}, total: {total})")
 
-    return ProductListResponse(
+    return ProductListResponse(  # type: ignore
         items=products,
         total=total,
         page=page,
@@ -80,11 +72,6 @@ def get_product(
     product_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Get a single product by ID.
-
-    - **product_id**: The ID of the product to retrieve
-    """
     product = db.query(Product).filter(Product.id == product_id).first()
 
     if not product:
@@ -103,18 +90,6 @@ def create_product(
     product: ProductCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Create a new product.
-
-    - **sku**: Unique product SKU (case-insensitive, will be normalized to uppercase)
-    - **name**: Product name (required)
-    - **description**: Product description (optional)
-    - **price**: Product price (optional, must be positive)
-    - **is_active**: Active status (default: true)
-
-    **Note:** SKU must be unique (case-insensitive). Duplicate SKUs will return 400 error.
-    """
-    # Check if SKU already exists (case-insensitive)
     existing = db.query(Product).filter(
         func.lower(Product.sku) == product.sku.lower()
     ).first()
@@ -126,13 +101,31 @@ def create_product(
             detail=f"Product with SKU '{product.sku}' already exists"
         )
 
-    # Create new product
     db_product = Product(**product.model_dump())
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
 
     logger.info(f"Created product: {db_product.sku} (ID: {db_product.id})")
+
+    try:
+        from app.tasks.webhook_tasks import trigger_webhooks_for_event
+        trigger_webhooks_for_event.delay(  # type: ignore
+            'product_created',
+            {
+                'product_id': db_product.id,
+                'sku': db_product.sku,
+                'name': db_product.name,
+                'description': db_product.description,
+                # type: ignore
+                'price': str(db_product.price) if db_product.price else None,
+                'is_active': db_product.is_active,
+                'created_at': db_product.created_at.isoformat()
+            }
+        )
+    except Exception as e:
+        logger.warning(f"Failed to trigger product_created webhook: {e}")
+
     return db_product
 
 
@@ -142,15 +135,6 @@ def update_product(
     product: ProductUpdate,
     db: Session = Depends(get_db)
 ):
-    """
-    Update an existing product.
-
-    - **product_id**: The ID of the product to update
-    - All fields are optional (only provided fields will be updated)
-
-    **Note:** SKU cannot be changed after creation.
-    """
-    # Find existing product
     db_product = db.query(Product).filter(Product.id == product_id).first()
 
     if not db_product:
@@ -160,7 +144,6 @@ def update_product(
             detail=f"Product with ID {product_id} not found"
         )
 
-    # Update only provided fields
     update_data = product.model_dump(exclude_unset=True)
 
     if not update_data:
@@ -177,6 +160,26 @@ def update_product(
     db.refresh(db_product)
 
     logger.info(f"Updated product: {db_product.sku} (ID: {product_id})")
+
+    try:
+        from app.tasks.webhook_tasks import trigger_webhooks_for_event
+        trigger_webhooks_for_event.delay(  # type: ignore
+            'product_updated',
+            {
+                'product_id': db_product.id,
+                'sku': db_product.sku,
+                'name': db_product.name,
+                'description': db_product.description,
+                # type: ignore
+                'price': str(db_product.price) if db_product.price else None,
+                'is_active': db_product.is_active,
+                'updated_at': db_product.updated_at.isoformat(),
+                'updated_fields': list(update_data.keys())
+            }
+        )
+    except Exception as e:
+        logger.warning(f"Failed to trigger product_updated webhook: {e}")
+
     return db_product
 
 
@@ -185,11 +188,6 @@ def delete_product(
     product_id: int,
     db: Session = Depends(get_db)
 ):
-    """
-    Delete a single product by ID.
-
-    - **product_id**: The ID of the product to delete
-    """
     db_product = db.query(Product).filter(Product.id == product_id).first()
 
     if not db_product:
@@ -199,11 +197,25 @@ def delete_product(
             detail=f"Product with ID {product_id} not found"
         )
 
-    sku = db_product.sku  # Store for logging
+    sku = db_product.sku
+    product_data = {
+        'product_id': db_product.id,
+        'sku': db_product.sku,
+        'name': db_product.name
+    }
+
     db.delete(db_product)
     db.commit()
 
     logger.info(f"Deleted product: {sku} (ID: {product_id})")
+
+    try:
+        from app.tasks.webhook_tasks import trigger_webhooks_for_event
+        trigger_webhooks_for_event.delay(  # type: ignore
+            'product_deleted', product_data)
+    except Exception as e:
+        logger.warning(f"Failed to trigger product_deleted webhook: {e}")
+
     return None
 
 
@@ -213,22 +225,12 @@ def bulk_delete_products(
         False, description="Must be true to confirm bulk deletion"),
     db: Session = Depends(get_db)
 ):
-    """
-    Delete ALL products from the database (STORY 3).
-
-    ⚠️ **WARNING**: This operation cannot be undone!
-
-    - **confirm**: Must be set to `true` to proceed with deletion
-
-    **Security**: Requires explicit confirmation via query parameter.
-    """
     if not confirm:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bulk delete requires explicit confirmation. Set confirm=true"
         )
 
-    # Count products before deletion
     count = db.query(Product).count()
 
     if count == 0:
@@ -238,11 +240,24 @@ def bulk_delete_products(
             count=0
         )
 
-    # Delete all products
     db.query(Product).delete()
     db.commit()
 
     logger.warning(f"⚠️ BULK DELETE: Deleted all {count} products")
+
+    try:
+        from app.tasks.webhook_tasks import trigger_webhooks_for_event
+        trigger_webhooks_for_event.delay(  # type: ignore
+            'product_deleted',
+            {
+                'bulk_delete': True,
+                'deleted_count': count,
+                'message': 'All products deleted'
+            }
+        )
+    except Exception as e:
+        logger.warning(
+            f"Failed to trigger product_deleted webhook for bulk delete: {e}")
 
     return BulkDeleteResponse(
         message=f"Successfully deleted all products",
@@ -258,13 +273,6 @@ def search_products(
     page_size: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
-    """
-    Search products across SKU, name, and description fields.
-
-    - **q**: Search query string (minimum 1 character)
-    - **page**: Page number (default: 1)
-    - **page_size**: Items per page (default: 50, max: 100)
-    """
     search_term = f"%{q.lower()}%"
 
     query = db.query(Product).filter(
@@ -275,20 +283,17 @@ def search_products(
         )
     )
 
-    # Get total count
     total = query.count()
 
-    # Apply pagination
     offset = (page - 1) * page_size
     products = query.order_by(Product.created_at.desc()).offset(
         offset).limit(page_size).all()
 
-    # Calculate total pages
     total_pages = (total + page_size - 1) // page_size if total > 0 else 0
 
     logger.info(f"Search '{q}' found {total} products")
 
-    return ProductListResponse(
+    return ProductListResponse(  # type: ignore
         items=products,
         total=total,
         page=page,

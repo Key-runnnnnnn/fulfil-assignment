@@ -119,7 +119,7 @@ const Upload = () => {
       });
 
       setJobId(response.data.job_id);
-      setJobStatus({ status: "processing", progress: 0 });
+      setJobStatus({ status: "processing", progress_percentage: 0 });
       setFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -191,7 +191,6 @@ const Upload = () => {
           />
         )}
 
-        {/* Upload Section */}
         <Card className="p-8 mb-8">
           <div
             onDragOver={handleDragOver}
@@ -273,7 +272,6 @@ const Upload = () => {
           )}
         </Card>
 
-        {/* Current Job Progress */}
         {jobStatus &&
           jobStatus.status !== "completed" &&
           jobStatus.status !== "failed" && (
@@ -289,9 +287,9 @@ const Upload = () => {
                 <div>
                   <div className="flex justify-between text-sm text-gray-600 mb-2">
                     <span>Progress</span>
-                    <span>{jobStatus.progress || 0}%</span>
+                    <span>{jobStatus.progress_percentage || 0}%</span>
                   </div>
-                  <ProgressBar progress={jobStatus.progress || 0} />
+                  <ProgressBar progress={jobStatus.progress_percentage || 0} />
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
@@ -308,21 +306,20 @@ const Upload = () => {
                     </p>
                   </div>
                   <div className="bg-red-50 rounded-lg p-4">
-                    <p className="text-sm text-red-600">Failed</p>
+                    <p className="text-sm text-red-600">Errors</p>
                     <p className="text-2xl font-bold text-red-700">
-                      {formatNumber(jobStatus.failed_rows || 0)}
+                      {formatNumber(jobStatus.error_count || 0)}
                     </p>
                   </div>
                 </div>
 
-                {jobStatus.error && (
-                  <Alert type="error" message={jobStatus.error} />
+                {jobStatus.error_message && (
+                  <Alert type="error" message={jobStatus.error_message} />
                 )}
               </div>
             </Card>
           )}
 
-        {/* Recent Jobs */}
         {recentJobs.length > 0 && (
           <Card className="p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -346,14 +343,14 @@ const Upload = () => {
                         {formatNumber(job.processed_rows || 0)} /{" "}
                         {formatNumber(job.total_rows || 0)} rows
                       </span>
-                      {job.created_at && (
-                        <span>{new Date(job.created_at).toLocaleString()}</span>
+                      {job.started_at && (
+                        <span>{new Date(job.started_at).toLocaleString()}</span>
                       )}
                     </div>
                   </div>
                   {job.status === "processing" && (
                     <div className="w-24">
-                      <ProgressBar progress={job.progress || 0} />
+                      <ProgressBar progress={job.progress_percentage || 0} />
                     </div>
                   )}
                 </div>
@@ -361,28 +358,6 @@ const Upload = () => {
             </div>
           </Card>
         )}
-
-        {/* Info Section */}
-        <Card className="p-6 mt-6 bg-blue-50 border-blue-200">
-          <h3 className="font-semibold text-blue-900 mb-2">
-            CSV Format Requirements
-          </h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>
-              • Required columns:{" "}
-              <code className="bg-blue-100 px-1 rounded">name</code>,{" "}
-              <code className="bg-blue-100 px-1 rounded">sku</code>,{" "}
-              <code className="bg-blue-100 px-1 rounded">description</code>
-            </li>
-            <li>
-              • Optional columns:{" "}
-              <code className="bg-blue-100 px-1 rounded">price</code>
-            </li>
-            <li>• SKU must be unique (case-insensitive)</li>
-            <li>• Maximum file size: 100 MB</li>
-            <li>• Processing is done in chunks for optimal performance</li>
-          </ul>
-        </Card>
       </div>
     </div>
   );

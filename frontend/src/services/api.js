@@ -9,7 +9,6 @@ const api = axios.create({
   },
 });
 
-// Products API
 export const productsAPI = {
   getAll: (params = {}) => {
     const { page = 1, pageSize = 20, sku, name, isActive, keyword } = params;
@@ -41,7 +40,6 @@ export const productsAPI = {
     api.get('/products/search/', { params: { q: keyword, limit } }),
 };
 
-// Webhooks API
 export const webhooksAPI = {
   getAll: () => api.get('/webhooks/'),
 
@@ -60,7 +58,6 @@ export const webhooksAPI = {
   getEventTypes: () => api.get('/webhooks/event-types'),
 };
 
-// Upload API
 export const uploadAPI = {
   uploadCSV: (file, onProgress) => {
     const formData = new FormData();
