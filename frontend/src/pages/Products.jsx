@@ -88,7 +88,8 @@ const Products = () => {
     setLoading(true);
     try {
       const response = await productsAPI.search(searchTerm, 50);
-      setProducts(response.data || []);
+      setProducts(response.data.items || []);
+      setPagination((prev) => ({ ...prev, total: response.data.total || 0 }));
       setError(null);
     } catch (err) {
       setError(err.response?.data?.detail || "Search failed");
