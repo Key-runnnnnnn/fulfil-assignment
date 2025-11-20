@@ -19,8 +19,8 @@ Before running this project, ensure you have the following installed on your sys
 1. **Clone the Repository**
 
    ```bash
-   git clone <repository-url>
-   cd fulfil
+   git clone https://github.com/Key-runnnnnnn/fulfil-assignment
+   cd fulfil-assignment
    ```
 
 2. **Start All Services with Docker Compose**
