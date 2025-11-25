@@ -204,6 +204,7 @@ fulfil/
 ### Render (Production)
 
 This project is configured for deployment on Render with:
+
 - Backend API (FastAPI)
 - Celery Worker (Background tasks)
 - Frontend (React Static Site)
@@ -211,11 +212,13 @@ This project is configured for deployment on Render with:
 - Neon (PostgreSQL)
 
 **📖 Deployment Guides:**
+
 - **Step-by-Step**: [`RENDER_DEPLOYMENT_STEPS.md`](RENDER_DEPLOYMENT_STEPS.md) - Complete deployment walkthrough
 - **Quick Reference**: [`QUICK_DEPLOY.md`](QUICK_DEPLOY.md) - Environment variables and quick commands
 - **CloudAMQP Setup**: [`CLOUDAMQP_SETUP.md`](CLOUDAMQP_SETUP.md) - RabbitMQ configuration details
 
 **Deployment Order:**
+
 1. Backend API (Web Service)
 2. Celery Worker (Background Worker)
 3. Frontend (Static Site)
