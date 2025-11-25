@@ -4,13 +4,6 @@ A full-stack application for managing products with CSV import functionality, we
 
 ---
 
-## 🌐 Live Demo (Render Deployment)
-
-**Deployment Guide**: See [`RENDER_DEPLOYMENT_STEPS.md`](RENDER_DEPLOYMENT_STEPS.md) for detailed deployment instructions.
-
-**Quick Deploy**: See [`QUICK_DEPLOY.md`](QUICK_DEPLOY.md) for copy-paste environment variables.
-
----
 
 ## 🚀 Quick Start Guide for Local Development
 
