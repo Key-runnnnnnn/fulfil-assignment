@@ -4,7 +4,15 @@ A full-stack application for managing products with CSV import functionality, we
 
 ---
 
-## 🚀 Quick Start Guide for Reviewers
+## 🌐 Live Demo (Render Deployment)
+
+**Deployment Guide**: See [`RENDER_DEPLOYMENT_STEPS.md`](RENDER_DEPLOYMENT_STEPS.md) for detailed deployment instructions.
+
+**Quick Deploy**: See [`QUICK_DEPLOY.md`](QUICK_DEPLOY.md) for copy-paste environment variables.
+
+---
+
+## 🚀 Quick Start Guide for Local Development
 
 ### Prerequisites
 
@@ -188,3 +196,28 @@ fulfil/
 - ✅ Pagination
 - ✅ Real-time progress updates
 - ✅ Responsive UI
+
+---
+
+## 🚀 Deployment
+
+### Render (Production)
+
+This project is configured for deployment on Render with:
+- Backend API (FastAPI)
+- Celery Worker (Background tasks)
+- Frontend (React Static Site)
+- CloudAMQP (RabbitMQ)
+- Neon (PostgreSQL)
+
+**📖 Deployment Guides:**
+- **Step-by-Step**: [`RENDER_DEPLOYMENT_STEPS.md`](RENDER_DEPLOYMENT_STEPS.md) - Complete deployment walkthrough
+- **Quick Reference**: [`QUICK_DEPLOY.md`](QUICK_DEPLOY.md) - Environment variables and quick commands
+- **CloudAMQP Setup**: [`CLOUDAMQP_SETUP.md`](CLOUDAMQP_SETUP.md) - RabbitMQ configuration details
+
+**Deployment Order:**
+1. Backend API (Web Service)
+2. Celery Worker (Background Worker)
+3. Frontend (Static Site)
+
+All services are deployed individually through the Render dashboard.
